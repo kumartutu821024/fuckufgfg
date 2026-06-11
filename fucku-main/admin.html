@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | KGS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+    </style>
+</head>
+<body class="text-slate-900">
+    <div class="min-h-screen flex flex-col">
+        <!-- Sidebar/Header -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                        <i class="fas fa-shield-halved"></i>
+                    </div>
+                    <h1 class="text-xl font-bold tracking-tight">Admin <span class="text-indigo-600">Dashboard</span></h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="lastUpdate" class="text-xs text-slate-400">Last update: Just now</span>
+                    <button onclick="refreshData()" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt text-slate-500"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-6 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-users text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Users</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h2 id="totalUsers" class="text-3xl font-black">0</h2>
+                        <span class="text-emerald-500 text-xs font-bold"><i class="fas fa-arrow-up"></i> All time</span>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-circle-dot animate-pulse"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Now</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h2 id="activeUsers" class="text-3xl font-black">0</h2>
+                        <span class="text-emerald-500 text-xs font-bold">Online</span>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-moon text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Offline</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h2 id="offlineUsers" class="text-3xl font-black">0</h2>
+                        <span class="text-rose-500 text-xs font-bold">Inactive</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User List -->
+            <div class="glass-card rounded-3xl shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800">User Tracking (Device IDs)</h3>
+                    <div class="text-xs text-slate-500">Showing users from last 24 hours</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                <th class="px-6 py-4 font-bold">Device ID</th>
+                                <th class="px-6 py-4 font-bold">Status</th>
+                                <th class="px-6 py-4 font-bold">Last Seen</th>
+                                <th class="px-6 py-4 font-bold">IP Address</th>
+                                <th class="px-6 py-4 font-bold">Browser</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="text-sm divide-y divide-slate-100">
+                            <!-- User rows will be injected here -->
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-slate-400">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <i class="fas fa-spinner fa-spin text-2xl"></i>
+                                        <span>Loading user data...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function refreshData() {
+            try {
+                const response = await fetch('users.json?t=' + Date.now());
+                if (!response.ok) throw new Error('No data found');
+
+                const data = await response.json();
+                renderDashboard(data);
+                document.getElementById('lastUpdate').textContent = 'Last update: ' + new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('userTableBody').innerHTML = `
+                    <tr><td colspan="5" class="px-6 py-12 text-center text-rose-500 font-bold">No user data found yet. Start browsing the app to see logs.</td></tr>
+                `;
+            }
+        }
+
+        function renderDashboard(users) {
+            const tableBody = document.getElementById('userTableBody');
+            const totalEl = document.getElementById('totalUsers');
+            const activeEl = document.getElementById('activeUsers');
+            const offlineEl = document.getElementById('offlineUsers');
+
+            const now = Math.floor(Date.now() / 1000);
+            const userEntries = Object.entries(users).sort((a, b) => b[1].lastSeen - a[1].lastSeen);
+
+            let activeCount = 0;
+            let html = '';
+
+            userEntries.forEach(([deviceId, info]) => {
+                const isOnline = (now - info.lastSeen) < 120; // Active in last 2 minutes
+                if (isOnline) activeCount++;
+
+                const lastSeenDate = new Date(info.lastSeen * 1000).toLocaleString();
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-mono text-xs text-indigo-600 font-bold">${deviceId.substring(0, 16)}...</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                                <span class="w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
+                                ${isOnline ? 'Active' : 'Offline'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-500">${lastSeenDate}</td>
+                        <td class="px-6 py-4 text-slate-500">${info.ip || 'Unknown'}</td>
+                        <td class="px-6 py-4">
+                            <div class="max-w-[150px] truncate text-xs text-slate-400" title="${info.ua}">
+                                ${info.ua}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            totalEl.textContent = userEntries.length;
+            activeEl.textContent = activeCount;
+            offlineEl.textContent = userEntries.length - activeCount;
+            tableBody.innerHTML = html || '<tr><td colspan="5" class="px-6 py-12 text-center text-slate-400">No users found</td></tr>';
+        }
+
+        // Auto refresh every 30 seconds
+        setInterval(refreshData, 30000);
+        refreshData();
+    </script>
+</body>
+</html>

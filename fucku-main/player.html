@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player - Khan Global Studies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; margin: 0; display: flex; flex-direction: column; height: 100vh; color: white; overflow: hidden; font-family: sans-serif; }
+        .video-container { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
+        video { width: 100%; max-height: 100%; outline: none; }
+
+        .custom-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .video-container:hover .custom-controls { opacity: 1; }
+
+        #fallback-timer { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 10px; font-size: 12px; display: none; z-index: 60; }
+        .loading-screen { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; items-center; justify-content: center; z-index: 50; }
+        .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #f39c12; width: 40px; height: 40px; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .control-btn { background: none; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+        .control-btn:active { transform: scale(0.9); }
+        .control-btn svg { width: 30px; height: 30px; }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading-screen">
+        <div class="spinner"></div>
+        <p class="text-gray-400 animate-pulse">Initializing Player...</p>
+    </div>
+
+    <div class="video-container" id="player-wrapper">
+        <video id="main-video" playsinline>
+            <source src="" type="video/mp4">
+        </video>
+
+        <div id="fallback-timer">External player in <span id="timer-sec">20</span>s</div>
+
+        <!-- Custom Controls Overlay -->
+        <div class="custom-controls">
+            <!-- Progress Bar -->
+            <input type="range" id="progress-bar" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-yellow-400" value="0" step="0.1">
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-6">
+                    <button class="control-btn" onclick="skip(-10)" title="Back 10s">
+                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12.5 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.31 2.69-6 6-6s6 2.69 6 6-2.69 6-6 6c-1.66 0-3.16-.68-4.25-1.78l-1.41 1.41C8.16 19.45 10.18 20 12.5 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.75-1.23-3.5-2.08V8h-1.5z"/></svg>
+                    </button>
+
+                    <button class="control-btn" id="play-pause-btn" onclick="togglePlay()">
+                        <svg id="play-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="pause-icon" class="hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+
+                    <button class="control-btn" onclick="skip(10)" title="Forward 10s">
+                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M11.5 3c4.97 0 9 4.03 9 9H23l-3.89 3.89-.07.14L15 12h3c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6c1.66 0 3.16-.68 4.25-1.78l1.41 1.41C15.84 19.45 13.82 20 11.5 20c-4.97 0-9-4.03-9-9s4.03-9 9-9zm1 5v5l-4.25 2.52-.75-1.23 3.5-2.08V8h1.5z"/></svg>
+                    </button>
+
+                    <span id="time-display" class="text-xs font-mono">00:00 / 00:00</span>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <select id="speed-control" onchange="changeSpeed(this.value)" class="bg-transparent text-xs font-bold border border-white/20 rounded px-2 py-1 outline-none">
+                        <option value="0.5" class="bg-black">0.5x</option>
+                        <option value="0.75" class="bg-black">0.75x</option>
+                        <option value="1" class="bg-black" selected>1x</option>
+                        <option value="1.25" class="bg-black">1.25x</option>
+                        <option value="1.5" class="bg-black">1.5x</option>
+                        <option value="2" class="bg-black">2x</option>
+                    </select>
+
+                    <button onclick="toggleFullscreen()" class="control-btn">
+                        <svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-4 bg-[#111] flex items-center justify-between border-t border-white/5">
+        <div class="flex items-center gap-4">
+            <button onclick="history.back()" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </button>
+            <h1 id="video-title" class="text-sm font-bold line-clamp-1">Video Title</h1>
+        </div>
+        <button id="external-btn" class="px-4 py-2 bg-yellow-400 text-black text-[10px] font-black rounded-lg uppercase tracking-widest hover:bg-yellow-500 transition-colors">
+            External
+        </button>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoUrl = urlParams.get('url');
+        const videoTitle = urlParams.get('title') || 'Playing Video';
+
+        // Youtube detection
+        if (videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'))) {
+            window.location.replace(videoUrl);
+        }
+
+        document.getElementById('video-title').innerText = videoTitle;
+        const video = document.getElementById('main-video');
+        const source = video.querySelector('source');
+        const externalBtn = document.getElementById('external-btn');
+        const fallbackTimer = document.getElementById('fallback-timer');
+        const timerSec = document.getElementById('timer-sec');
+        const loading = document.getElementById('loading');
+        const progressBar = document.getElementById('progress-bar');
+        const timeDisplay = document.getElementById('time-display');
+
+        if (videoUrl) {
+            source.src = videoUrl;
+            video.load();
+            externalBtn.onclick = () => window.open(videoUrl, '_blank');
+        } else {
+            alert('No video URL provided!');
+            history.back();
+        }
+
+        let timeLeft = 20;
+        let isPlayingFlag = false;
+
+        const checkPlayback = setInterval(() => {
+            if (!isPlayingFlag) {
+                timeLeft--;
+                timerSec.innerText = timeLeft;
+                fallbackTimer.style.display = 'block';
+
+                if (timeLeft <= 0) {
+                    clearInterval(checkPlayback);
+                    window.location.replace(videoUrl);
+                }
+            }
+        }, 1000);
+
+        function togglePlay() {
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        }
+
+        video.onplay = () => {
+            isPlayingFlag = true;
+            clearInterval(checkPlayback);
+            fallbackTimer.style.display = 'none';
+            document.getElementById('play-icon').classList.add('hidden');
+            document.getElementById('pause-icon').classList.remove('hidden');
+        };
+
+        video.onpause = () => {
+            document.getElementById('play-icon').classList.remove('hidden');
+            document.getElementById('pause-icon').classList.add('hidden');
+        };
+
+        function skip(seconds) {
+            video.currentTime += seconds;
+        }
+
+        function changeSpeed(val) {
+            video.playbackRate = parseFloat(val);
+        }
+
+        function toggleFullscreen() {
+            const wrapper = document.getElementById('player-wrapper');
+            if (!document.fullscreenElement) {
+                wrapper.requestFullscreen().catch(err => alert(`Error: ${err.message}`));
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        video.ontimeupdate = () => {
+            const cur = video.currentTime;
+            const dur = video.duration || 0;
+            progressBar.value = (cur / dur) * 100 || 0;
+            timeDisplay.innerText = `${formatTime(cur)} / ${formatTime(dur)}`;
+        };
+
+        progressBar.oninput = () => {
+            const dur = video.duration || 0;
+            video.currentTime = (progressBar.value / 100) * dur;
+        };
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return (h > 0 ? h + ":" : "") +
+                   (m < 10 ? "0" + m : m) + ":" +
+                   (s < 10 ? "0" + s : s);
+        }
+
+        video.onplaying = () => { loading.style.display = 'none'; };
+        video.onwaiting = () => { loading.style.display = 'flex'; };
+        video.oncanplay = () => { loading.style.display = 'none'; };
+        video.onerror = () => { window.location.replace(videoUrl); };
+
+        // Click on video to toggle play
+        video.onclick = togglePlay;
+    </script>
+</body>
+</html>

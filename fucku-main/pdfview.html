@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer - Khan Global Studies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #f1f5f9; height: 100vh; display: flex; flex-direction: column; }
+        iframe { width: 100%; flex: 1; border: none; }
+        .header { padding: 15px 25px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; items-center justify-between; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="flex items-center gap-4">
+            <button onclick="history.back()" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </button>
+            <div>
+                <h1 id="pdf-title" class="font-bold text-gray-900 line-clamp-1">PDF Document</h1>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Khan Global Studies</p>
+            </div>
+        </div>
+        <a id="download-btn" href="#" target="_blank" class="px-5 py-2.5 bg-black text-white text-xs font-black rounded-xl uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg shadow-gray-200">
+            Download PDF
+        </a>
+    </div>
+
+    <iframe id="pdf-frame" src=""></iframe>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const pdfUrl = urlParams.get('url');
+        const pdfTitle = urlParams.get('title') || 'PDF Viewer';
+
+        document.getElementById('pdf-title').innerText = pdfTitle;
+        const frame = document.getElementById('pdf-frame');
+        const downloadBtn = document.getElementById('download-btn');
+
+        if (pdfUrl) {
+            // Using Google Docs Viewer as a proxy to handle various PDF issues and ensure it displays in iframe
+            frame.src = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+            downloadBtn.href = pdfUrl;
+        } else {
+            alert('No PDF URL provided!');
+            history.back();
+        }
+    </script>
+</body>
+</html>
