@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khan Global Studies - Dynamic API Admin Panel</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['"Space Grotesk"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#025a91',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at top right, #0c1524, #070a13);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-xl w-full bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 p-8 shadow-2xl relative overflow-hidden">
+        
+        <!-- Header Background Glow -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- App Logo & Title -->
+        <div class="text-center mb-8 relative z-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-brand-500 shadow-lg text-white font-bold text-2xl mb-4 font-display">
+                KGS
+            </div>
+            <h1 class="text-3xl font-extrabold font-display bg-gradient-to-r from-white via-slate-100 to-cyan-400 bg-clip-text text-transparent">
+                KGS Firestore Admin Control
+            </h1>
+            <p class="text-slate-400 mt-2 text-sm">
+                Control app endpoints, course JSON targets, and app version update popups in real-time via Cloud Firestore.
+            </p>
+        </div>
+
+        <!-- Current Status Badge -->
+        <div class="bg-slate-950/60 rounded-xl border border-slate-800/80 p-4 mb-6">
+            <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Active Firestore Connection</div>
+            <div id="statusLoading" class="text-amber-500 font-semibold text-lg flex items-center gap-2 mt-1">
+                <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Fetching current config...
+            </div>
+            <div id="statusValue" class="hidden text-emerald-400 font-medium text-xs mt-1 flex flex-col gap-1.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Content Base API URL:</span>
+                    <span id="currentApiUrl" class="font-mono text-cyan-300 text-[11px] truncate max-w-[280px]">https://api.thescholarverse.site/</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Course / Batch JSON URL:</span>
+                    <span id="currentBatchUrl" class="font-mono text-cyan-300 text-[11px] truncate max-w-[280px]">https://raw.githubusercontent.com/...</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Target App Version:</span>
+                    <span id="currentAppVersion" class="font-bold text-amber-400 text-xs">1.0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400">App Update URL:</span>
+                    <span id="currentUpdateUrl" class="font-mono text-cyan-300 text-[11px] truncate max-w-[280px]">https://thescholarverse.site/</span>
+                </div>
+                <div class="flex h-2 w-2 relative self-end mt-1">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </div>
+            </div>
+            <div id="statusError" class="hidden text-red-400 font-semibold text-sm mt-1 flex items-center gap-2">
+                ⚠️ Empty Firestore config document or access error.
+            </div>
+        </div>
+
+        <!-- Form fields -->
+        <div class="space-y-6 relative z-10">
+            
+            <!-- Firebase Project ID Input -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="projectId" class="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Firebase Project ID</label>
+                    <input type="text" id="projectId" 
+                        value="kgs2-6aac4"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-mono text-[11px] transition" 
+                        placeholder="kgs2-x">
+                </div>
+                <div>
+                    <label for="apiKey" class="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Firebase API Key</label>
+                    <input type="text" id="apiKey" 
+                        value="AIzaSyBSUS2UvmQlvr6dOVd0KSC8IPrere0eYU4"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-mono text-[11px] transition" 
+                        placeholder="AIzaSy...">
+                </div>
+            </div>
+
+            <!-- Target App Version Input -->
+            <div>
+                <label for="appVersion" class="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Target App Version (Force Update Control)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="appVersion" 
+                        value="1.0"
+                        class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-mono text-sm transition" 
+                        placeholder="1.0">
+                    <button onclick="setVersion(1.0)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-2 rounded-lg border border-slate-700 text-xs transition">
+                        Set 1.0 (Normal)
+                    </button>
+                    <button onclick="setVersion(1.1)" class="bg-red-950 hover:bg-red-900 text-red-300 font-semibold px-3 py-2 rounded-lg border border-red-800 text-xs transition">
+                        Set 1.1 (Force ⚠️)
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">If set to 1.1 (or any value > 1.0), mobile clients presents a lock screen force-blocking users until updated/dismissed.</p>
+            </div>
+
+            <!-- Custom App Update URL Input -->
+            <div>
+                <label for="updateUrl" class="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">App Update Redirect URL</label>
+                <input type="text" id="updateUrl" 
+                    value="https://thescholarverse.site/"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-mono text-sm transition" 
+                    placeholder="https://">
+                <p class="text-[10px] text-slate-400 mt-1">URL opened when clients click the "Update Now" button in the update dialog screen.</p>
+            </div>
+
+            <!-- Target API URL Input -->
+            <div>
+                <label for="apiUrl" class="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Target Base API Url (Dynamic All Content)</label>
+                <input type="text" id="apiUrl" 
+                    value="https://rojgarwithankit.freedev.app/kgs/"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-mono text-sm transition" 
+                    placeholder="https://rojgarwithankit.freedev.app/kgs/">
+                <p class="text-[10px] text-slate-500 mt-1">Base url serving dynamic content endpoints such as /subjects and /videos.</p>
+            </div>
+
+            <!-- Course / Batch API URL Input -->
+            <div>
+                <label for="batchUrl" class="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Course / Batch API URL (JSON List)</label>
+                <input type="text" id="batchUrl" 
+                    value="https://rojgarwithankit.freedev.app/kgs/api.php?type=batches"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-mono text-sm transition" 
+                    placeholder="https://rojgarwithankit.freedev.app/kgs/api.php?type=batches">
+                <p class="text-[10px] text-slate-400 mt-1">Endpoint where the main batches feed loads from. Pre-configured with the KGS source file.</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4 pt-4 border-t border-slate-800">
+                <button onclick="refreshCurrentUrl()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 px-4 rounded-lg transition border border-slate-700 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H12v3" />
+                    </svg>
+                    Refresh State
+                </button>
+                <button onclick="saveApiUrl()" class="flex-[2] bg-gradient-to-r from-cyan-500 to-brand-600 hover:from-cyan-600 hover:to-brand-700 text-white font-semibold py-3 px-6 rounded-lg transition shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Write to Firestore
+                </button>
+            </div>
+            
+        </div>
+
+        <!-- Banner Alert Area -->
+        <div id="toast" class="hidden mt-6 rounded-lg p-4 text-sm flex items-center justify-between transition-opacity duration-300">
+            <span id="toastMessage">Configurations updated successfully!</span>
+            <button onclick="hideToast()" class="text-white hover:text-slate-200 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            refreshCurrentUrl();
+        });
+
+        function setVersion(version) {
+            document.getElementById('appVersion').value = version.toFixed(1);
+        }
+
+        async function refreshCurrentUrl() {
+            const projectId = document.getElementById('projectId').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!projectId) {
+                showStatus('error', 'Please enter a valid Firebase Project ID.');
+                return;
+            }
+
+            showStatus('loading');
+            try {
+                const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/config/app_config?key=${apiKey}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showStatus('error', 'Configuration document not found. Click "Write to Firestore" to create it.');
+                        return;
+                    }
+                    throw new Error('Firestore response error with status: ' + response.status);
+                }
+                const data = await response.json();
+                
+                if (data && data.fields) {
+                    const api_url = data.fields.api_url ? data.fields.api_url.stringValue : "https://rojgarwithankit.freedev.app/kgs/";
+                    const batch_api_url = data.fields.batch_api_url ? data.fields.batch_api_url.stringValue : "https://rojgarwithankit.freedev.app/kgs/api.php?type=batches";
+                    const app_version = data.fields.app_version ? data.fields.app_version.stringValue : "1.0";
+                    const app_update_url = data.fields.app_update_url ? data.fields.app_update_url.stringValue : "https://thescholarverse.site/";
+
+                    document.getElementById('currentApiUrl').textContent = api_url;
+                    document.getElementById('currentBatchUrl').textContent = batch_api_url;
+                    document.getElementById('currentAppVersion').textContent = app_version;
+                    document.getElementById('currentUpdateUrl').textContent = app_update_url;
+
+                    document.getElementById('apiUrl').value = api_url;
+                    document.getElementById('batchUrl').value = batch_api_url;
+                    document.getElementById('appVersion').value = app_version;
+                    document.getElementById('updateUrl').value = app_update_url;
+
+                    showStatus('success');
+                } else {
+                    showStatus('error', 'Firestore app_config fields are empty or uninitialized.');
+                }
+            } catch (e) {
+                showStatus('error', e.message);
+            }
+        }
+
+        async function saveApiUrl() {
+            const projectId = document.getElementById('projectId').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            let apiUrl = document.getElementById('apiUrl').value.trim();
+            let batchUrl = document.getElementById('batchUrl').value.trim();
+            let appVersion = document.getElementById('appVersion').value.trim();
+            let appUpdateUrl = document.getElementById('updateUrl').value.trim();
+
+            if (!projectId) {
+                showNotification('Firebase Project ID cannot be blank', 'error');
+                return;
+            }
+            if (!apiUrl) {
+                showNotification('Content Base API URL cannot be blank', 'error');
+                return;
+            }
+            if (!batchUrl) {
+                showNotification('Courses Batch JSON URL cannot be blank', 'error');
+                return;
+            }
+            if (!appVersion) {
+                showNotification('Target App Version cannot be blank', 'error');
+                return;
+            }
+            if (!appUpdateUrl) {
+                showNotification('App Update Redirect URL cannot be blank', 'error');
+                return;
+            }
+
+            // Ensure proper trailing slash for API URL if it is a folder/base directory
+            if (!apiUrl.endsWith('/') && !apiUrl.includes('?') && !apiUrl.endsWith('.php')) {
+                apiUrl = apiUrl + '/';
+                document.getElementById('apiUrl').value = apiUrl;
+            }
+
+            showNotification('Writing configurations to Cloud Firestore...', 'info');
+
+            try {
+                const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/config/app_config?updateMask.fieldPaths=api_url&updateMask.fieldPaths=batch_api_url&updateMask.fieldPaths=app_version&updateMask.fieldPaths=app_update_url&key=${apiKey}`;
+                const payload = {
+                    fields: {
+                        api_url: { stringValue: apiUrl },
+                        batch_api_url: { stringValue: batchUrl },
+                        app_version: { stringValue: appVersion },
+                        app_update_url: { stringValue: appUpdateUrl }
+                    }
+                };
+
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Firestore response status code ' + response.status);
+                }
+
+                showNotification('Firestore document updated successfully!', 'success');
+                refreshCurrentUrl();
+            } catch (e) {
+                showNotification('Update failed: ' + e.message, 'error');
+            }
+        }
+
+        function showStatus(state, msg = '') {
+            const loading = document.getElementById('statusLoading');
+            const success = document.getElementById('statusValue');
+            const error = document.getElementById('statusError');
+
+            loading.classList.add('hidden');
+            success.classList.add('hidden');
+            error.classList.add('hidden');
+
+            if (state === 'loading') {
+                loading.classList.remove('hidden');
+            } else if (state === 'success') {
+                success.classList.remove('hidden');
+            } else if (state === 'error') {
+                error.textContent = ' ' + msg;
+                error.classList.remove('hidden');
+            }
+        }
+
+        function showNotification(message, type) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+
+            toast.classList.remove('hidden', 'bg-emerald-600', 'bg-red-600', 'bg-sky-600');
+            toastMessage.textContent = message;
+
+            if (type === 'success') {
+                toast.classList.add('bg-emerald-600');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-sky-600');
+            }
+        }
+
+        function hideToast() {
+            document.getElementById('toast').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
